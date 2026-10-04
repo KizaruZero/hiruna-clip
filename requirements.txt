@@ -1,0 +1,3 @@
+# Python runtime uses only the standard library.
+# External executable required: yt-dlp and ffmpeg.
+pytest>=8.0
