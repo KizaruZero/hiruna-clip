@@ -182,7 +182,6 @@ def cmd_fetch(clip_id, handles, cookies, workdir):
     for attempt in range(1, 4):
         try:
             subprocess.run(cmd, check=True, cwd=workdir, env=env)
-            break
         except subprocess.CalledProcessError:
             if attempt == 3:
                 raise
@@ -190,21 +189,36 @@ def cmd_fetch(clip_id, handles, cookies, workdir):
             print(f"Attempt {attempt} failed (YouTube throttling?) — "
                   f"retrying in {wait}s...")
             time.sleep(wait)
+            continue
+        # Sanity check: audio must span the whole clip, not truncate.
+        # (yt-dlp section cuts are intermittently flaky on DASH audio.)
+        if _av_ok(out):
+            break
+        if attempt == 3:
+            sys.exit(f"error: {out} has truncated audio after 3 attempts — "
+                     f"aborting.")
+        print(f"Attempt {attempt}: audio truncated, re-downloading...")
+        os.remove(out)
 
-    # Sanity check: audio must span the whole clip, not truncate.
+
+def _av_ok(path):
+    """True if the file's audio duration covers its video duration."""
     probe = subprocess.run(
         ["ffprobe", "-v", "error", "-show_entries", "stream=codec_type,duration",
-         "-of", "csv=p=0", out],
+         "-of", "csv=p=0", path],
         capture_output=True, text=True, check=True)
     durations = {}
     for line in probe.stdout.strip().splitlines():
         ctype, dur = line.split(",")
         durations[ctype] = float(dur)
-    if durations.get("audio", 0) < durations.get("video", 0) * 0.9:
-        print(f"WARNING: audio ({durations.get('audio', 0):.1f}s) is much shorter "
-              f"than video ({durations.get('video', 0):.1f}s) — "
-              f"the section cut may have truncated the audio stream.")
-    print(f"OK -> {out}")
+    v, a = durations.get("video", 0), durations.get("audio", 0)
+    ok = v > 0 and a >= v * 0.9
+    if not ok:
+        print(f"WARNING: audio ({a:.1f}s) much shorter than "
+              f"video ({v:.1f}s).")
+    else:
+        print(f"OK -> {path} (video {v:.1f}s, audio {a:.1f}s)")
+    return ok
 
 
 def main():
