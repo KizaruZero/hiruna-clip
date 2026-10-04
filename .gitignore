@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+.env
+.env.*
+
+# Video / media
+*.mp4
+*.mkv
+*.webm
+*.mov
+*.avi
+*.wav
+*.mp3
+*.m4a
+*.flac
+source/
+media/
+output/
+clips/
+
+# Generated subtitles / temporary files
+*.vtt
+*.srt
+*.ass
+*.tmp
+*.part
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
